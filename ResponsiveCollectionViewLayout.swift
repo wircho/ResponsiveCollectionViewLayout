@@ -41,7 +41,7 @@ extension CADisplayLink {
 
 extension UICollectionViewCell {
     var rcv_rasterizedImage:UIImage! {
-        UIGraphicsBeginImageContextWithOptions(self.bounds.size, self.opaque, 0)
+        UIGraphicsBeginImageContextWithOptions(self.bounds.size, false, 0)
         self.layer.renderInContext(UIGraphicsGetCurrentContext())
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
@@ -145,26 +145,38 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     }
     
     func setupCollectionView() {
-        longPressGestureRecognizer = UILongPressGestureRecognizer(target:self,action:"handleLongPressGesture:")
-        longPressGestureRecognizer.delegate = self;
         
-        // Links the default long press gesture recognizer to the custom long press gesture recognizer we are creating now
-        // by enforcing failure dependency so that they doesn't clash.
-        for gestureRecognizer in self.collectionView!.gestureRecognizers! {
-            if let gr = gestureRecognizer as? UILongPressGestureRecognizer {
-                gr.requireGestureRecognizerToFail(longPressGestureRecognizer)
+        if self._allowMovingCells {
+            
+            longPressGestureRecognizer = UILongPressGestureRecognizer(target:self,action:"handleLongPressGesture:")
+            longPressGestureRecognizer.delegate = self;
+            
+            // Links the default long press gesture recognizer to the custom long press gesture recognizer we are creating now
+            // by enforcing failure dependency so that they doesn't clash.
+            for gestureRecognizer in self.collectionView!.gestureRecognizers! {
+                if let gr = gestureRecognizer as? UILongPressGestureRecognizer {
+                    gr.requireGestureRecognizerToFail(longPressGestureRecognizer)
+                }
             }
+            
+            self.collectionView!.addGestureRecognizer(longPressGestureRecognizer)
+            
+            panGestureRecognizer = UIPanGestureRecognizer(target: self, action:"handlePanGesture:")
+            panGestureRecognizer.delegate = self
+            
+            self.collectionView!.addGestureRecognizer(panGestureRecognizer)
+            
+            // Useful in multiple scenarios: one common scenario being when the Notification Center drawer is pulled down
+            NSNotificationCenter.defaultCenter().addObserver(self, selector: "handleApplicationWillResignActive:", name: UIApplicationWillResignActiveNotification, object: nil)
+            
         }
-        
-        self.collectionView!.addGestureRecognizer(longPressGestureRecognizer)
-        
-        panGestureRecognizer = UIPanGestureRecognizer(target: self, action:"handlePanGesture:")
-        panGestureRecognizer.delegate = self
-        
-        self.collectionView!.addGestureRecognizer(panGestureRecognizer)
-        
-        // Useful in multiple scenarios: one common scenario being when the Notification Center drawer is pulled down
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "handleApplicationWillResignActive:", name: UIApplicationWillResignActiveNotification, object: nil)
+    }
+    
+    private var _allowMovingCells = true
+    
+    convenience init(allowMovingCells:Bool) {
+        self.init()
+        self._allowMovingCells = allowMovingCells
     }
     
     override init() {
@@ -643,6 +655,10 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     public func handleApplicationWillResignActive(note:NSNotification) {
         self.panGestureRecognizer.enabled = false;
         self.panGestureRecognizer.enabled = true;
+    }
+    
+    public override func shouldInvalidateLayoutForBoundsChange(newBounds: CGRect) -> Bool {
+        return true
     }
     
 }
