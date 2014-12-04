@@ -173,6 +173,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     }
     
     private var _allowMovingCells = true
+    var automaticallyHidesMovingCell = true
     
     convenience init(allowMovingCells:Bool) {
         self.init()
@@ -194,7 +195,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     }
     
     func applyLayoutAttributes(layoutAttributes:UICollectionViewLayoutAttributes) {
-        if layoutAttributes.indexPath? == self.selectedItemIndexPath {
+        if layoutAttributes.indexPath? == self.selectedItemIndexPath && automaticallyHidesMovingCell {
             layoutAttributes.hidden = true
         }
     }
@@ -490,6 +491,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             
             for kind in suplementaryKinds {
                 let attributes = UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s))
+                
                 
                 attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForSuplementaryViewOfKind: kind, inSection: s, afterLayout: currentLayoutInfo)
                 
