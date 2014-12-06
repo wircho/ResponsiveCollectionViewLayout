@@ -412,6 +412,8 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                 
                 let layoutAttributes = self.layoutAttributesForItemAtIndexPath(currentIndexPath)
                 
+                self.longPressGestureRecognizer.enabled = false
+                
                 weak var weakSelf = self
                 
                 UIView.animateWithDuration(0.3, delay: 0, options: .BeginFromCurrentState,
@@ -424,6 +426,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                     },
                     completion: { (finished:Bool) -> Void in
                         if let strongSelf = weakSelf {
+                            strongSelf.longPressGestureRecognizer.enabled = true
                             strongSelf.currentView.removeFromSuperview()
                             strongSelf.currentView = nil
                             strongSelf.invalidateLayout()
