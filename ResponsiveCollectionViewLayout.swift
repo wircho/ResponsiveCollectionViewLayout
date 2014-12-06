@@ -114,6 +114,14 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     
     private var currentLayoutInfo:ResponsiveLayoutInfo!
     
+    func currentFrameForCellAtIndexPath(indexPath:NSIndexPath) -> CGRect {
+        if currentLayoutInfo.cells.count > indexPath.section
+        && currentLayoutInfo.cells[indexPath.section].count > indexPath.item {
+            return currentLayoutInfo.cells[indexPath.section][indexPath.item].frame
+        }
+        return CGRectZero
+    }
+    
     enum ScrollingDirection:Int {
         case Unknown
         case Up
@@ -183,6 +191,10 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     override init() {
         super.init()
         self.addCollectionViewObserver()
+    }
+    
+    deinit {
+        self.removeObserver(self, forKeyPath: kRCVCollectionViewKeyPath)
     }
     
     required public init(coder aDecoder: NSCoder) {
