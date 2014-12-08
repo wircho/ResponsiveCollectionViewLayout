@@ -321,7 +321,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             }
             translation = CGPointMake(0,distance)
         case .Down:
-            let maxY = max(contentSize.height,frameSize.height) - frameSize.height + self.collectionView!.contentInset.bottom
+            let maxY = max(contentSize.height - frameSize.height + self.collectionView!.contentInset.bottom,-self.collectionView!.contentInset.top)
             if contentOffset.y + distance >= maxY {
                 distance = maxY - contentOffset.y
             }
@@ -334,7 +334,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             }
             translation = CGPointMake(distance,0)
         case .Right:
-            let maxX = max(contentSize.width,frameSize.width) - frameSize.width + self.collectionView!.contentInset.right
+            let maxX = max(contentSize.width - frameSize.width + self.collectionView!.contentInset.right,-self.collectionView!.contentInset.left)
             if contentOffset.x + distance >= maxX {
                 distance = maxX - contentOffset.x
             }
