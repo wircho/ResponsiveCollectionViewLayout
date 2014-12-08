@@ -23,6 +23,7 @@ public func += (inout left: CGPoint, right: CGPoint) {
 
 let kRCVScrollingDirectionKey = "RCVScrollingDirection";
 let kRCVCollectionViewKeyPath = "collectionView";
+let kRCVCollectionViewContentOffsetKeyPath = "collectionView.contentOffset";
 var kRCVDLUserInfoHandle: UInt8 = 0
 let kRCV_FRAMES_PER_SECOND:CGFloat = 60
 
@@ -177,6 +178,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             // Useful in multiple scenarios: one common scenario being when the Notification Center drawer is pulled down
             NSNotificationCenter.defaultCenter().addObserver(self, selector: "handleApplicationWillResignActive:", name: UIApplicationWillResignActiveNotification, object: nil)
             
+            
         }
     }
     
@@ -195,6 +197,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     
     deinit {
         self.removeObserver(self, forKeyPath: kRCVCollectionViewKeyPath)
+        self.removeObserver(self, forKeyPath: kRCVCollectionViewContentOffsetKeyPath)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -204,6 +207,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     
     func addCollectionViewObserver() {
         self.addObserver(self, forKeyPath: kRCVCollectionViewKeyPath, options: .New, context: nil)
+        self.addObserver(self, forKeyPath: kRCVCollectionViewContentOffsetKeyPath, options: .New, context: nil)
     }
     
     func applyLayoutAttributes(layoutAttributes:UICollectionViewLayoutAttributes) {
@@ -311,26 +315,26 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         switch direction {
         case .Up:
             distance = -distance
-            let minY:CGFloat = 0
+            let minY:CGFloat = -self.collectionView!.contentInset.top
             if contentOffset.y + distance <= minY {
-                distance -= contentOffset.y
+                distance = minY - contentOffset.y
             }
             translation = CGPointMake(0,distance)
         case .Down:
-            let maxY = max(contentSize.height,frameSize.height) - frameSize.height
+            let maxY = max(contentSize.height,frameSize.height) - frameSize.height + self.collectionView!.contentInset.bottom
             if contentOffset.y + distance >= maxY {
                 distance = maxY - contentOffset.y
             }
             translation = CGPointMake(0,distance)
         case .Left:
             distance = -distance
-            let minX:CGFloat = 0
+            let minX:CGFloat = -self.collectionView!.contentInset.left
             if contentOffset.x + distance <= minX {
-                distance = -contentOffset.x
+                distance = minX - contentOffset.x
             }
             translation = CGPointMake(distance,0)
         case .Right:
-            let maxX = max(contentSize.width,frameSize.width) - frameSize.width
+            let maxX = max(contentSize.width,frameSize.width) - frameSize.width + self.collectionView!.contentInset.right
             if contentOffset.x + distance >= maxX {
                 distance = maxX - contentOffset.x
             }
@@ -343,7 +347,17 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         
         self.currentView.center = self.currentViewCenter + self.panTranslationInCollectionView
         
+        
+        
+        //println("center1: \(self.currentView.center.y)")
+        
         self.collectionView!.contentOffset = contentOffset + translation
+        
+        //println("")
+        
+        //println("scrolling to \(self.collectionView!.contentOffset.y)")
+        
+        self.invalidateLayoutIfNecessary()
         
     }
     
@@ -434,6 +448,8 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                             strongSelf.currentView.transform = CGAffineTransformMakeScale(1,1)
                             strongSelf.currentView.center = layoutAttributes.center
                             
+                            //println("center1: \(strongSelf.currentView.center.y)")
+                            
                         }
                     },
                     completion: { (finished:Bool) -> Void in
@@ -466,15 +482,17 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             let viewCenter = self.currentViewCenter + self.panTranslationInCollectionView
             self.currentView.center = viewCenter
             
+            //println("center1: \(self.currentView.center.y)")
+            
             self.invalidateLayoutIfNecessary()
             
-            if viewCenter.y < CGRectGetMinY(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.top && self.collectionView!.contentOffset.y > 0.5 {
+            if viewCenter.y < CGRectGetMinY(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.top && self.collectionView!.contentOffset.y > 0.5 - self.collectionView!.contentInset.top {
                 self.setupScrollTimerInDirection(.Up)
-            }else if viewCenter.y > CGRectGetMaxY(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.bottom && self.collectionView!.contentOffset.y < self.collectionView!.contentSize.height - self.collectionView!.bounds.size.height - 0.5 {
+            }else if viewCenter.y > CGRectGetMaxY(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.bottom && self.collectionView!.contentOffset.y < self.collectionView!.contentSize.height - self.collectionView!.bounds.size.height - 0.5 + self.collectionView!.contentInset.bottom {
                 self.setupScrollTimerInDirection(.Down)
-            }else if viewCenter.x < CGRectGetMinX(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.left && self.collectionView!.contentOffset.x > 0.5 {
+            }else if viewCenter.x < CGRectGetMinX(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.left && self.collectionView!.contentOffset.x > 0.5 - self.collectionView!.contentInset.left {
                 self.setupScrollTimerInDirection(.Left)
-            }else if viewCenter.x > CGRectGetMaxX(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.right && self.collectionView!.contentOffset.x < self.collectionView!.contentSize.width - self.collectionView!.bounds.size.width - 0.5 {
+            }else if viewCenter.x > CGRectGetMaxX(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.right && self.collectionView!.contentOffset.x < self.collectionView!.contentSize.width - self.collectionView!.bounds.size.width - 0.5 + self.collectionView!.contentInset.right {
                 self.setupScrollTimerInDirection(.Right)
             }else{
                 self.invalidatesScrollTimer()
@@ -665,6 +683,10 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                 self.setupCollectionView()
             }else{
                 self.invalidatesScrollTimer()
+            }
+        }else if keyPath == kRCVCollectionViewContentOffsetKeyPath {
+            if let cV = self.collectionView {
+                //println("offset: \(cV.contentOffset.y)");
             }
         }
     }
