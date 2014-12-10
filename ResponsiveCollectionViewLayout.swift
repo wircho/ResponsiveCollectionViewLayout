@@ -19,6 +19,14 @@ public func += (inout left: CGPoint, right: CGPoint) {
     left = left + right
 }
 
+public func * (left: CGFloat, right: CGRect) -> CGRect {
+    return CGRectMake(left*right.origin.x, left*right.origin.y, left*right.size.width, left*right.size.height)
+}
+
+public func + (left: CGRect, right: CGRect) -> CGRect {
+    return CGRectMake(left.origin.x + right.origin.x, left.origin.y + right.origin.y, left.size.width + right.size.width, left.size.height + right.size.height)
+}
+
 //MARK: Constants
 
 let kRCVScrollingDirectionKey = "RCVScrollingDirection";
@@ -80,15 +88,19 @@ extension UICollectionViewCell {
 
 @objc public protocol ResponsiveCollectionViewLayoutDelegate: NSObjectProtocol {
     
-    func suplementaryViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
+    func cellSuplementaryViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
     
-    func decorationViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
+    func cellDecorationViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
     
-    func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, rectForSuplementaryViewOfKind kind:String, inSection section:Int, afterLayout layoutInfo:ResponsiveLayoutInfo!) -> CGRect
+    func sectionSuplementaryViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
     
-    func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, rectForDecorationViewOfKind kind:String, inSection section:Int, afterLayout layoutInfo:ResponsiveLayoutInfo!) -> CGRect
+    func sectionDecorationViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
     
-    func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, rectForCellAtIndexPath indexPath:NSIndexPath, afterLayout layoutInfo:ResponsiveLayoutInfo!) -> CGRect
+    func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, processAttributes attrs:UICollectionViewLayoutAttributes, forSuplementaryViewOfKind kind:String, atIndexPath indexPath:NSIndexPath, afterLayout layoutInfo:ResponsiveLayoutInfo!)
+    
+    func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, processAttributes attrs: UICollectionViewLayoutAttributes, forDecorationViewOfKind kind:String, atIndexPath indexPath:NSIndexPath, afterLayout layoutInfo:ResponsiveLayoutInfo!)
+    
+    func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, processAttributes attrs: UICollectionViewLayoutAttributes, forCellAtIndexPath indexPath:NSIndexPath, afterLayout layoutInfo:ResponsiveLayoutInfo!)
     
     func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, contentSizeAfterLayout layoutInfo:ResponsiveLayoutInfo!) -> CGSize
     
@@ -97,9 +109,11 @@ extension UICollectionViewCell {
 //MARK: Layout Info Class
 
 @objc public class ResponsiveLayoutInfo {
-    public var suplementaryViews:[[String:UICollectionViewLayoutAttributes]]! = []
-    public var decorationViews:[[String:UICollectionViewLayoutAttributes]]! = []
+    //public var sectionSuplementaryViews:[[String:UICollectionViewLayoutAttributes]]! = []
+    //public var sectionDecorationViews:[[String:UICollectionViewLayoutAttributes]]! = []
     public var cells:([[UICollectionViewLayoutAttributes]])! = []
+    public var suplementaryViews:([[[String:UICollectionViewLayoutAttributes]]])! = []
+    public var decorationViews:([[[String:UICollectionViewLayoutAttributes]]])! = []
 }
 
 //MARK: Collection View Layout Class
@@ -514,25 +528,34 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         
         currentLayoutInfo = ResponsiveLayoutInfo()
         
-        let suplementaryKinds = self.lDelegate.suplementaryViewKindsForCollectionView(self.collectionView!, layout: self)
+        let sectionSuplementaryKinds = self.lDelegate.sectionSuplementaryViewKindsForCollectionView(self.collectionView!, layout: self)
         
-        let decorationViewKinds = self.lDelegate.decorationViewKindsForCollectionView(self.collectionView!, layout: self)
+        let sectionDecorationViewKinds = self.lDelegate.sectionDecorationViewKindsForCollectionView(self.collectionView!, layout: self)
+        
+        let cellSuplementaryKinds = self.lDelegate.cellSuplementaryViewKindsForCollectionView(self.collectionView!, layout: self)
+        
+        let cellDecorationViewKinds = self.lDelegate.cellDecorationViewKindsForCollectionView(self.collectionView!, layout: self)
         
         let numSections = self.collectionView!.numberOfSections()
         
         for var s = 0; s < numSections; s += 1 {
             
-            for kind in suplementaryKinds {
+            for kind in sectionSuplementaryKinds {
                 let attributes = UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s))
                 
-                
-                attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForSuplementaryViewOfKind: kind, inSection: s, afterLayout: currentLayoutInfo)
+                self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
                 
                 if currentLayoutInfo.suplementaryViews.count <= s {
-                    currentLayoutInfo.suplementaryViews.append([:])
+                    currentLayoutInfo.suplementaryViews.append([])
                 }
                 
-                currentLayoutInfo.suplementaryViews[s][kind] = attributes
+                if currentLayoutInfo.suplementaryViews[s].count < 1 {
+                    currentLayoutInfo.suplementaryViews[s].append([kind:attributes])
+                }else{
+                    currentLayoutInfo.suplementaryViews[s][0][kind] = attributes
+                }
+                
+                
             }
             
             let numCells = self.collectionView!.numberOfItemsInSection(s)
@@ -540,27 +563,74 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             for var c = 0; c < numCells; c += 1 {
                 let indexPath = NSIndexPath(forItem: c, inSection: s)
                 
+                
+                for kind in cellSuplementaryKinds {
+                    let attributes = UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: indexPath)
+                    
+                    self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
+                    
+                    if currentLayoutInfo.suplementaryViews.count <= indexPath.section {
+                        currentLayoutInfo.suplementaryViews.append([])
+                    }
+                    
+                    if currentLayoutInfo.suplementaryViews[indexPath.section].count <= indexPath.item {
+                        currentLayoutInfo.suplementaryViews[indexPath.section].append([:])
+                    }
+                    
+                    currentLayoutInfo.suplementaryViews[indexPath.section][indexPath.item][kind] = attributes
+                    
+                }
+                
+                
+                
                 let attributes = UICollectionViewLayoutAttributes(forCellWithIndexPath: indexPath)
                 
-                attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
+                self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
+                
+                //attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
                 
                 if currentLayoutInfo.cells.count <= s {
                     currentLayoutInfo.cells.append([])
                 }
                 
                 currentLayoutInfo.cells[s].append(attributes)
-            }
-            
-            for kind in decorationViewKinds {
-                let attributes = UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s))
                 
-                attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForDecorationViewOfKind: kind, inSection: s, afterLayout: currentLayoutInfo)
                 
-                if currentLayoutInfo.decorationViews.count <= s {
-                    currentLayoutInfo.decorationViews.append([:])
+                for kind in cellDecorationViewKinds {
+                    let attributes = UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: indexPath)
+                    
+                    self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
+                    
+                    if currentLayoutInfo.decorationViews.count <= indexPath.section {
+                        currentLayoutInfo.decorationViews.append([])
+                    }
+                    
+                    if currentLayoutInfo.decorationViews[indexPath.section].count <= indexPath.item {
+                        currentLayoutInfo.decorationViews[indexPath.section].append([:])
+                    }
+                    
+                    currentLayoutInfo.decorationViews[indexPath.section][indexPath.item][kind] = attributes
+                    
                 }
                 
-                currentLayoutInfo.decorationViews[s][kind] = attributes
+            }
+            
+            for kind in sectionDecorationViewKinds {
+                let attributes = UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s))
+                
+                self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
+                
+                //attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForDecorationViewOfKind: kind, inSection: s, afterLayout: currentLayoutInfo)
+                
+                if currentLayoutInfo.decorationViews.count <= s {
+                    currentLayoutInfo.decorationViews.append([])
+                }
+                
+                if currentLayoutInfo.suplementaryViews[s].count < 1 {
+                    currentLayoutInfo.suplementaryViews[s].append([kind:attributes])
+                }else{
+                    currentLayoutInfo.suplementaryViews[s][0][kind] = attributes
+                }
             }
             
         }
@@ -582,18 +652,22 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             }
         }
         
-        for dict in self.currentLayoutInfo.suplementaryViews {
-            for (_,attr) in dict {
-                if CGRectIntersectsRect(rect,attr.frame) {
-                    attributes.append(attr)
+        for array in self.currentLayoutInfo.suplementaryViews {
+            for dict in array {
+                for (_,attr) in dict {
+                    if CGRectIntersectsRect(rect,attr.frame) {
+                        attributes.append(attr)
+                    }
                 }
             }
         }
         
-        for dict in self.currentLayoutInfo.decorationViews {
-            for (_,attr) in dict {
-                if CGRectIntersectsRect(rect,attr.frame) {
-                    attributes.append(attr)
+        for array in self.currentLayoutInfo.decorationViews {
+            for dict in array {
+                for (_,attr) in dict {
+                    if CGRectIntersectsRect(rect,attr.frame) {
+                        attributes.append(attr)
+                    }
                 }
             }
         }
@@ -602,11 +676,11 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     }
     
     private func _layoutAttributesForSupplementaryViewOfKind(elementKind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
-        return self.currentLayoutInfo.suplementaryViews[indexPath.section][elementKind]
+        return self.currentLayoutInfo.suplementaryViews[indexPath.section][indexPath.item][elementKind]
     }
     
     private func _layoutAttributesForDecorationViewOfKind(elementKind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
-        return self.currentLayoutInfo.decorationViews[indexPath.section][elementKind]
+        return self.currentLayoutInfo.decorationViews[indexPath.section][indexPath.item][elementKind]
     }
     
     private func _layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
@@ -634,6 +708,8 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     public override func layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
         
         let layoutAttributes = self._layoutAttributesForItemAtIndexPath(indexPath)
+        
+        let item = indexPath.item
         
         if let attr = layoutAttributes {
             switch attr.representedElementCategory {
