@@ -88,9 +88,9 @@ extension UICollectionViewCell {
 
 @objc public protocol ResponsiveCollectionViewLayoutDelegate: NSObjectProtocol {
     
-    func cellSuplementaryViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
+    optional func cellSuplementaryViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
     
-    func cellDecorationViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
+    optional func cellDecorationViewKindsForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> [String]
     
     optional func shouldPrepareLayoutForCollectionView(collectionView:UICollectionView, layout:UICollectionViewLayout) -> Bool
     
@@ -534,7 +534,13 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     
     //MARK: UICollectionViewLayout Overrriden Methods
     
+    var shouldLogPrepareLayout = false
+    
     public override func prepareLayout() {
+        
+        if shouldLogPrepareLayout {
+            //TODO: Uncomment this for testing? // println("Logging!!!!!!!")
+        }
         
         let shouldPrepare = self.lDelegate.shouldPrepareLayoutForCollectionView?(self.collectionView!, layout: self) ?? true
         
@@ -546,9 +552,9 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             
             let sectionDecorationViewKinds = self.lDelegate.sectionDecorationViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
             
-            let cellSuplementaryKinds = self.lDelegate.cellSuplementaryViewKindsForCollectionView(self.collectionView!, layout: self)
+            let cellSuplementaryKinds = self.lDelegate.cellSuplementaryViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
             
-            let cellDecorationViewKinds = self.lDelegate.cellDecorationViewKindsForCollectionView(self.collectionView!, layout: self)
+            let cellDecorationViewKinds = self.lDelegate.cellDecorationViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
             
             let numSections = self.collectionView!.numberOfSections()
             
