@@ -130,6 +130,8 @@ extension UICollectionViewCell {
 
 public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRecognizerDelegate {
     
+    public var slideFromBottom:Bool = false
+    
     public var scrollingSpeed:CGFloat = 300
     public var scrollingTriggerEdgeInsets = UIEdgeInsetsMake(50,50,50,50)
     public var longPressGestureRecognizer:UILongPressGestureRecognizer!
@@ -753,6 +755,14 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         }
         
         return layoutAttributes
+    }
+    
+    public override func initialLayoutAttributesForAppearingItemAtIndexPath(itemIndexPath: NSIndexPath) -> UICollectionViewLayoutAttributes? {
+        let attributes = self.layoutAttributesForItemAtIndexPath(itemIndexPath).copy() as UICollectionViewLayoutAttributes
+        if slideFromBottom {
+            attributes.frame.origin.y += max(UIScreen.mainScreen().bounds.size.width,UIScreen.mainScreen().bounds.size.height)
+        }
+        return attributes
     }
     
     public override func layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
