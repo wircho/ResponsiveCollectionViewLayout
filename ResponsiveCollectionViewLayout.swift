@@ -387,108 +387,175 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         
     }
     
+    func beginMovingCell(gestureRecognizer:UILongPressGestureRecognizer) {
+        let currentIndexPath:NSIndexPath! = self.collectionView!.indexPathForItemAtPoint(gestureRecognizer.locationInView(self.collectionView))
+        
+        if currentIndexPath == nil {
+            return
+        }
+        
+        let canMove = self.dataSource?.collectionView?(self.collectionView!, canMoveItemAtIndexPath: currentIndexPath)
+        if canMove != nil && !(canMove!) {
+            return
+        }
+        
+        self.selectedItemIndexPath = currentIndexPath
+        
+        self.delegate?.collectionView?(self.collectionView!, layout: self, willBeginDraggingItemAtIndexPath: self.selectedItemIndexPath)
+        
+        let collectionViewCell:UICollectionViewCell! = self.collectionView!.cellForItemAtIndexPath(self.selectedItemIndexPath!)
+        
+        if collectionViewCell == nil {
+            abort()
+        }
+        
+        self.currentView = UIView(frame: collectionViewCell.frame)
+        
+        collectionViewCell.highlighted = true
+        let highlightedImageView = UIImageView(image: collectionViewCell.rcv_rasterizedImage)
+        highlightedImageView.autoresizingMask = .FlexibleWidth | .FlexibleHeight
+        highlightedImageView.alpha = 1
+        
+        collectionViewCell.highlighted = false
+        let imageView = UIImageView(image: collectionViewCell.rcv_rasterizedImage)
+        imageView.autoresizingMask = .FlexibleWidth | .FlexibleHeight
+        imageView.alpha = 0
+        
+        self.currentView.addSubview(imageView)
+        self.currentView.addSubview(highlightedImageView)
+        
+        self.collectionView!.addSubview(self.currentView)
+        
+        
+        
+        self.currentViewCenter = self.currentView.center
+        
+        weak var weakSelf = self
+        
+        
+        UIView.animateWithDuration(0.3, delay: 0.0, options: .BeginFromCurrentState,
+            animations: { () -> Void in
+                if let strongSelf = weakSelf {
+                    strongSelf.currentView.transform = CGAffineTransformMakeScale(1,1);
+                    highlightedImageView.alpha = 0;
+                    imageView.alpha = 1;
+                }
+            },
+            completion: { (finished:Bool) -> Void in
+                if let strongSelf = weakSelf {
+                    highlightedImageView.removeFromSuperview()
+                    strongSelf.delegate?.collectionView?(self.collectionView!, layout: self, didBeginDraggingItemAtIndexPath: self.selectedItemIndexPath)
+                }
+            }
+        )
+        self.invalidateLayout()
+    }
+    
+    func endMovingCell() {
+        if let currentIndexPath = self.selectedItemIndexPath {
+            self.delegate?.collectionView?(self.collectionView!, layout: self, willEndDraggingItemAtIndexPath: currentIndexPath)
+            
+            self.selectedItemIndexPath = nil
+            self.currentViewCenter = CGPointZero
+            
+            let layoutAttributes = self.layoutAttributesForItemAtIndexPath(currentIndexPath)
+            
+            self.longPressGestureRecognizer.enabled = false
+            
+            weak var weakSelf = self
+            
+            UIView.animateWithDuration(0.3, delay: 0, options: .BeginFromCurrentState,
+                animations: { () -> Void in
+                    if let strongSelf = weakSelf {
+                        strongSelf.currentView.transform = CGAffineTransformMakeScale(1,1)
+                        strongSelf.currentView.center = layoutAttributes.center
+                        
+                        //println("center1: \(strongSelf.currentView.center.y)")
+                        
+                    }
+                },
+                completion: { (finished:Bool) -> Void in
+                    if let strongSelf = weakSelf {
+                        strongSelf.longPressGestureRecognizer.enabled = true
+                        strongSelf.currentView.removeFromSuperview()
+                        strongSelf.currentView = nil
+                        strongSelf.invalidateLayout()
+                        self.delegate?.collectionView?(self.collectionView!, layout: self, didEndDraggingItemAtIndexPath: currentIndexPath)
+                    }
+                }
+            )
+        }
+    }
+    
+    public var timeToStartMoving:Double = 1.5
+    
+    private var _longPressIdentifier:Int = 0 {
+        didSet {
+            _isReadyToMove = false
+        }
+    }
+    
+    func delay(delay:Double, closure:()->()) {
+        dispatch_after(
+            dispatch_time(
+                DISPATCH_TIME_NOW,
+                Int64(delay * Double(NSEC_PER_SEC))
+            ),
+            dispatch_get_main_queue(), closure)
+    }
+    
+    private var _isReadyToMove:Bool = false
+    private var _isLongPressing:Bool = false
+    
+    private var _indexPathForInteraction:NSIndexPath?
+    
     func handleLongPressGesture(gestureRecognizer:UILongPressGestureRecognizer) {
         
         switch gestureRecognizer.state {
         case .Began:
             
-            let currentIndexPath:NSIndexPath! = self.collectionView!.indexPathForItemAtPoint(gestureRecognizer.locationInView(self.collectionView))
+            _isLongPressing = true
             
-            if currentIndexPath == nil {
-                return
-            }
+            _indexPathForInteraction = self.collectionView!.indexPathForItemAtPoint(gestureRecognizer.locationInView(self.collectionView))
             
-            let canMove = self.dataSource?.collectionView?(self.collectionView!, canMoveItemAtIndexPath: currentIndexPath)
-            if canMove != nil && !(canMove!) {
-                return
-            }
+            self.cellInteractionClosure?(_indexPathForInteraction,gestureRecognizer)
             
-            self.selectedItemIndexPath = currentIndexPath
+            _longPressIdentifier += 1
+            let identifier = _longPressIdentifier
             
-            self.delegate?.collectionView?(self.collectionView!, layout: self, willBeginDraggingItemAtIndexPath: self.selectedItemIndexPath)
-            
-            let collectionViewCell:UICollectionViewCell! = self.collectionView!.cellForItemAtIndexPath(self.selectedItemIndexPath!)
-            
-            if collectionViewCell == nil {
-                abort()
-            }
-            
-            self.currentView = UIView(frame: collectionViewCell.frame)
-            
-            collectionViewCell.highlighted = true
-            let highlightedImageView = UIImageView(image: collectionViewCell.rcv_rasterizedImage)
-            highlightedImageView.autoresizingMask = .FlexibleWidth | .FlexibleHeight
-            highlightedImageView.alpha = 1
-            
-            collectionViewCell.highlighted = false
-            let imageView = UIImageView(image: collectionViewCell.rcv_rasterizedImage)
-            imageView.autoresizingMask = .FlexibleWidth | .FlexibleHeight
-            imageView.alpha = 0
-            
-            self.currentView.addSubview(imageView)
-            self.currentView.addSubview(highlightedImageView)
-            
-            self.collectionView!.addSubview(self.currentView)
-            
-            
-            
-            self.currentViewCenter = self.currentView.center
-            
-            weak var weakSelf = self
-            
-            
-            UIView.animateWithDuration(0.3, delay: 0.0, options: .BeginFromCurrentState,
-                animations: { () -> Void in
-                    if let strongSelf = weakSelf {
-                        strongSelf.currentView.transform = CGAffineTransformMakeScale(1,1);
-                        highlightedImageView.alpha = 0;
-                        imageView.alpha = 1;
-                    }
-                },
-                completion: { (finished:Bool) -> Void in
-                    if let strongSelf = weakSelf {
-                        highlightedImageView.removeFromSuperview()
-                        strongSelf.delegate?.collectionView?(self.collectionView!, layout: self, didBeginDraggingItemAtIndexPath: self.selectedItemIndexPath)
+            delay(timeToStartMoving, closure: {
+                [weak self]
+                () -> () in
+
+                if let s = self {
+                    if identifier == s._longPressIdentifier {
+                        
+                        s._isReadyToMove = true
+                        s.cellInteractionClosure?(nil,gestureRecognizer)
+                        s.beginMovingCell(gestureRecognizer)
                     }
                 }
-            )
-            self.invalidateLayout()
+            })
+            
+            
+            
         case .Cancelled:
             fallthrough
         case .Ended:
-            if let currentIndexPath = self.selectedItemIndexPath {
-                self.delegate?.collectionView?(self.collectionView!, layout: self, willEndDraggingItemAtIndexPath: currentIndexPath)
-                
-                self.selectedItemIndexPath = nil
-                self.currentViewCenter = CGPointZero
-                
-                let layoutAttributes = self.layoutAttributesForItemAtIndexPath(currentIndexPath)
-                
-                self.longPressGestureRecognizer.enabled = false
-                
-                weak var weakSelf = self
-                
-                UIView.animateWithDuration(0.3, delay: 0, options: .BeginFromCurrentState,
-                    animations: { () -> Void in
-                        if let strongSelf = weakSelf {
-                            strongSelf.currentView.transform = CGAffineTransformMakeScale(1,1)
-                            strongSelf.currentView.center = layoutAttributes.center
-                            
-                            //println("center1: \(strongSelf.currentView.center.y)")
-                            
-                        }
-                    },
-                    completion: { (finished:Bool) -> Void in
-                        if let strongSelf = weakSelf {
-                            strongSelf.longPressGestureRecognizer.enabled = true
-                            strongSelf.currentView.removeFromSuperview()
-                            strongSelf.currentView = nil
-                            strongSelf.invalidateLayout()
-                            self.delegate?.collectionView?(self.collectionView!, layout: self, didEndDraggingItemAtIndexPath: currentIndexPath)
-                        }
-                    }
-                )
+            
+            self.cellInteractionClosure?(nil,gestureRecognizer)
+            
+            _isLongPressing = false
+            
+            if self._isReadyToMove {
+                delay(0, closure: {
+                    self._longPressIdentifier += 1
+                })
+                endMovingCell()
+            }else {
+                self._longPressIdentifier += 1
             }
+            
         default:
             break
             
@@ -497,6 +564,8 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         
     }
     
+    var cellInteractionClosure:((NSIndexPath?,UIGestureRecognizer)->Void)? = nil
+    
     func handlePanGesture(gestureRecognizer:UIPanGestureRecognizer) {
         
         switch gestureRecognizer.state {
@@ -504,30 +573,44 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             fallthrough
         case .Changed:
             
-            self.panTranslationInCollectionView = gestureRecognizer.translationInView(self.collectionView!)
-            let viewCenter = self.currentViewCenter + self.panTranslationInCollectionView
-            self.currentView.center = viewCenter
-            
-            //println("center1: \(self.currentView.center.y)")
-            
-            self.invalidateLayoutIfNecessary()
-            
-            if viewCenter.y < CGRectGetMinY(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.top && self.collectionView!.contentOffset.y > 0.5 - self.collectionView!.contentInset.top {
-                self.setupScrollTimerInDirection(.Up)
-            }else if viewCenter.y > CGRectGetMaxY(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.bottom && self.collectionView!.contentOffset.y < self.collectionView!.contentSize.height - self.collectionView!.bounds.size.height - 0.5 + self.collectionView!.contentInset.bottom {
-                self.setupScrollTimerInDirection(.Down)
-            }else if viewCenter.x < CGRectGetMinX(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.left && self.collectionView!.contentOffset.x > 0.5 - self.collectionView!.contentInset.left {
-                self.setupScrollTimerInDirection(.Left)
-            }else if viewCenter.x > CGRectGetMaxX(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.right && self.collectionView!.contentOffset.x < self.collectionView!.contentSize.width - self.collectionView!.bounds.size.width - 0.5 + self.collectionView!.contentInset.right {
-                self.setupScrollTimerInDirection(.Right)
-            }else{
-                self.invalidatesScrollTimer()
+            if self._isReadyToMove {
+                self.panTranslationInCollectionView = gestureRecognizer.translationInView(self.collectionView!)
+                let viewCenter = self.currentViewCenter + self.panTranslationInCollectionView
+                self.currentView.center = viewCenter
+                
+                //println("center1: \(self.currentView.center.y)")
+                
+                self.invalidateLayoutIfNecessary()
+                
+                if viewCenter.y < CGRectGetMinY(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.top && self.collectionView!.contentOffset.y > 0.5 - self.collectionView!.contentInset.top {
+                    self.setupScrollTimerInDirection(.Up)
+                }else if viewCenter.y > CGRectGetMaxY(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.bottom && self.collectionView!.contentOffset.y < self.collectionView!.contentSize.height - self.collectionView!.bounds.size.height - 0.5 + self.collectionView!.contentInset.bottom {
+                    self.setupScrollTimerInDirection(.Down)
+                }else if viewCenter.x < CGRectGetMinX(self.collectionView!.bounds) + self.scrollingTriggerEdgeInsets.left && self.collectionView!.contentOffset.x > 0.5 - self.collectionView!.contentInset.left {
+                    self.setupScrollTimerInDirection(.Left)
+                }else if viewCenter.x > CGRectGetMaxX(self.collectionView!.bounds) - self.scrollingTriggerEdgeInsets.right && self.collectionView!.contentOffset.x < self.collectionView!.contentSize.width - self.collectionView!.bounds.size.width - 0.5 + self.collectionView!.contentInset.right {
+                    self.setupScrollTimerInDirection(.Right)
+                }else{
+                    self.invalidatesScrollTimer()
+                }
+            }else if self._isLongPressing {
+                
+                self._longPressIdentifier += 1
+                
+                self.cellInteractionClosure?(_indexPathForInteraction,gestureRecognizer)
+                
             }
             
         case .Cancelled:
             fallthrough
         case .Ended:
-            self.invalidatesScrollTimer()
+            if self._isReadyToMove {
+                self.cellInteractionClosure?(nil,gestureRecognizer)
+                delay(0, closure: {
+                    self._longPressIdentifier += 1
+                })
+                self.invalidatesScrollTimer()
+            }
         default:
             break
         }
@@ -796,7 +879,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     
     public func gestureRecognizerShouldBegin(gestureRecognizer: UIGestureRecognizer) -> Bool {
         if self.panGestureRecognizer.isEqual(gestureRecognizer) {
-            return (self.selectedItemIndexPath != nil)
+            return (self.selectedItemIndexPath != nil) || self._isLongPressing
         }
         return true
     }
