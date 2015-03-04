@@ -114,6 +114,8 @@ extension UICollectionViewCell {
     
     func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, contentSizeAfterLayout layoutInfo:ResponsiveLayoutInfo!) -> CGSize
     
+    optional func collectionView(collectionView:UICollectionView, layout:UICollectionViewLayout, postProcessLayoutInfo layoutInfo:ResponsiveLayoutInfo!)
+    
 }
 
 //MARK: Layout Info Class
@@ -387,12 +389,16 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         
     }
     
+    var _isMovingCell = false
+    
     func beginMovingCell(gestureRecognizer:UILongPressGestureRecognizer) {
         let currentIndexPath:NSIndexPath! = self.collectionView!.indexPathForItemAtPoint(gestureRecognizer.locationInView(self.collectionView))
         
         if currentIndexPath == nil {
             return
         }
+        
+        _isMovingCell = true
         
         let canMove = self.dataSource?.collectionView?(self.collectionView!, canMoveItemAtIndexPath: currentIndexPath)
         if canMove != nil && !(canMove!) {
@@ -408,6 +414,8 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         if collectionViewCell == nil {
             abort()
         }
+        
+        //let resizeScale:CGFloat = 1.4
         
         self.currentView = UIView(frame: collectionViewCell.frame)
         
@@ -426,6 +434,13 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         
         self.collectionView!.addSubview(self.currentView)
         
+//        UIView.animateWithDuration(0.5, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0, options: UIViewAnimationOptions.allZeros, animations: { () -> Void in
+//            
+//            self.currentView.transform = CGAffineTransformMakeScale(resizeScale, resizeScale)
+//            
+//        }, completion: nil)
+        
+       
         
         
         self.currentViewCenter = self.currentView.center
@@ -433,10 +448,15 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         weak var weakSelf = self
         
         
-        UIView.animateWithDuration(0.3, delay: 0.0, options: .BeginFromCurrentState,
+        UIView.animateWithDuration(
+            0.3,
+            delay: 0.0,
+            usingSpringWithDamping: 0.5,
+            initialSpringVelocity: 0,
+            options: .BeginFromCurrentState,
             animations: { () -> Void in
                 if let strongSelf = weakSelf {
-                    strongSelf.currentView.transform = CGAffineTransformMakeScale(1,1);
+                    strongSelf.currentView.transform = CGAffineTransformMakeScale(1.05,1.05);
                     highlightedImageView.alpha = 0;
                     imageView.alpha = 1;
                 }
@@ -448,10 +468,14 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                 }
             }
         )
+        
         self.invalidateLayout()
     }
     
     func endMovingCell() {
+        
+        _isMovingCell = false
+        
         if let currentIndexPath = self.selectedItemIndexPath {
             self.delegate?.collectionView?(self.collectionView!, layout: self, willEndDraggingItemAtIndexPath: currentIndexPath)
             
@@ -633,6 +657,8 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             
             currentLayoutInfo = ResponsiveLayoutInfo()
             
+            
+            
             let sectionSuplementaryKinds = self.lDelegate.sectionSuplementaryViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
             
             let sectionDecorationViewKinds = self.lDelegate.sectionDecorationViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
@@ -646,7 +672,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             for var s = 0; s < numSections; s += 1 {
                 
                 for kind in sectionSuplementaryKinds {
-                    let attributes = UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s))
+                    let attributes = _postProcessAttributes( UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s)))
                     
                     self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
                     
@@ -670,7 +696,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                     
                     
                     for kind in cellSuplementaryKinds {
-                        let attributes = UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: indexPath)
+                        let attributes = _postProcessAttributes(UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: indexPath))
                         
                         self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
                         
@@ -688,7 +714,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                     
                     
                     
-                    let attributes = UICollectionViewLayoutAttributes(forCellWithIndexPath: indexPath)
+                    let attributes = _postProcessAttributes(UICollectionViewLayoutAttributes(forCellWithIndexPath: indexPath))
                     
                     self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
                     
@@ -702,7 +728,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                     
                     
                     for kind in cellDecorationViewKinds {
-                        let attributes = UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: indexPath)
+                        let attributes = _postProcessAttributes(UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: indexPath))
                         
                         self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
                         
@@ -721,7 +747,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                 }
                 
                 for kind in sectionDecorationViewKinds {
-                    let attributes = UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s))
+                    let attributes = _postProcessAttributes(UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s)))
                     
                     self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
                     
@@ -739,6 +765,9 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
                 }
                 
             }
+            
+            self.lDelegate.collectionView?(self.collectionView!, layout: self, postProcessLayoutInfo: currentLayoutInfo)
+            
         }else{
             currentLayoutInfo = nil
         }
@@ -751,11 +780,46 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         return self.lDelegate.collectionView(self.collectionView!, layout: self, contentSizeAfterLayout: self.currentLayoutInfo)
     }
     
+    let backgroundAlpha:CGFloat = 0.5
+    
+    func _postProcessAttributes(attributes:UICollectionViewLayoutAttributes!) -> UICollectionViewLayoutAttributes! {
+    
+        if let array = _postProcessAttributes([attributes]) {
+            return array[0] as UICollectionViewLayoutAttributes
+        }else {
+            return attributes
+        }
+    }
+    
+    func _postProcessAttributes(attributes:[AnyObject]?) -> [AnyObject]? {
+        
+        if _isMovingCell {
+            if let array = attributes {
+                return array.map {
+                    obj in
+                    if let attr = obj as? UICollectionViewLayoutAttributes {
+                        attr.alpha = self.backgroundAlpha
+                        return attr
+                    }else {
+                        return obj
+                    }
+                }
+            }else {
+                return nil
+            }
+        }else {
+            return attributes
+        }
+        
+        
+        
+    }
+    
     private func _layoutAttributesForElementsInRect(rect: CGRect) -> [AnyObject]? {
         
         if self.currentLayoutInfo == nil {
             
-            return self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForElementsInRect: rect)
+            return _postProcessAttributes(self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForElementsInRect: rect))
             
         }else{
             
@@ -797,7 +861,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     private func _layoutAttributesForSupplementaryViewOfKind(elementKind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
         if self.currentLayoutInfo == nil {
             
-            return self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForSuplementaryViewOfKind: elementKind, atIndexPath: indexPath)
+            return _postProcessAttributes(self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForSuplementaryViewOfKind: elementKind, atIndexPath: indexPath))
             
         }else{
             return self.currentLayoutInfo.suplementaryViews[indexPath.section][indexPath.item][elementKind]
@@ -807,7 +871,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     private func _layoutAttributesForDecorationViewOfKind(elementKind: String, atIndexPath indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
         if self.currentLayoutInfo == nil {
             
-            return self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForDecorationViewOfKind: elementKind, atIndexPath: indexPath)
+            return _postProcessAttributes(self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForDecorationViewOfKind: elementKind, atIndexPath: indexPath))
             
         }else{
             return self.currentLayoutInfo.decorationViews[indexPath.section][indexPath.item][elementKind]
@@ -816,7 +880,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     
     private func _layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
         if self.currentLayoutInfo == nil {
-            return self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForItemAtIndexPath: indexPath)
+            return _postProcessAttributes(self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForItemAtIndexPath: indexPath))
         }else{
             return self.currentLayoutInfo.cells[indexPath.section][indexPath.item]
         }
