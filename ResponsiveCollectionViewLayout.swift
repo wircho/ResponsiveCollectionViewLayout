@@ -651,7 +651,15 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             //TODO: Uncomment this for testing? // println("Logging!!!!!!!")
         }
         
-        let shouldPrepare = self.lDelegate.shouldPrepareLayoutForCollectionView?(self.collectionView!, layout: self) ?? true
+        println("Layout: this collection view \(self.collectionView) has layout \(self) and delegate \(self.collectionView?.delegate)")
+        
+        let ldel = self.lDelegate!
+        
+        
+        
+        let thecv = self.collectionView!
+        
+        let shouldPrepare = ldel.shouldPrepareLayoutForCollectionView?(thecv, layout: self) ?? true
         
         if shouldPrepare {
             
