@@ -651,7 +651,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             //TODO: Uncomment this for testing? // println("Logging!!!!!!!")
         }
         
-        println("Layout: this collection view \(self.collectionView) has layout \(self) and delegate \(self.collectionView?.delegate)")
+        //println("Layout: this collection view \(self.collectionView) has layout \(self) and delegate \(self.collectionView?.delegate)")
         
         let ldel = self.lDelegate!
         
@@ -887,6 +887,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     }
     
     private func _layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
+        println("asking about item at index \(indexPath.item)")
         if self.currentLayoutInfo == nil {
             return _postProcessAttributes(self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForItemAtIndexPath: indexPath))
         }else{
@@ -912,13 +913,13 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         return layoutAttributes
     }
     
-    public override func initialLayoutAttributesForAppearingItemAtIndexPath(itemIndexPath: NSIndexPath) -> UICollectionViewLayoutAttributes? {
-        let attributes = self.layoutAttributesForItemAtIndexPath(itemIndexPath).copy() as UICollectionViewLayoutAttributes
-        if slideFromBottom {
-            attributes.frame.origin.y += max(UIScreen.mainScreen().bounds.size.width,UIScreen.mainScreen().bounds.size.height)
-        }
-        return attributes
-    }
+//    public override func initialLayoutAttributesForAppearingItemAtIndexPath(itemIndexPath: NSIndexPath) -> UICollectionViewLayoutAttributes? {
+//        let attributes = self.layoutAttributesForItemAtIndexPath(itemIndexPath).copy() as UICollectionViewLayoutAttributes
+//        if slideFromBottom {
+//            attributes.frame.origin.y += max(UIScreen.mainScreen().bounds.size.width,UIScreen.mainScreen().bounds.size.height)
+//        }
+//        return attributes
+//    }
     
     public override func layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
         
