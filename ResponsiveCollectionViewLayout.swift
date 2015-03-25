@@ -183,10 +183,12 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     
     func setupCollectionView() {
         
-        if self._allowMovingCells {
+        //if self._allowMovingCells {
             
             longPressGestureRecognizer = UILongPressGestureRecognizer(target:self,action:"handleLongPressGesture:")
             longPressGestureRecognizer.delegate = self;
+        
+            longPressGestureRecognizer.enabled = longPressEnabled
             
             // Links the default long press gesture recognizer to the custom long press gesture recognizer we are creating now
             // by enforcing failure dependency so that they doesn't clash.
@@ -207,7 +209,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             NSNotificationCenter.defaultCenter().addObserver(self, selector: "handleApplicationWillResignActive:", name: UIApplicationWillResignActiveNotification, object: nil)
             
             
-        }
+        //}
     }
     
     private var _allowMovingCells = true
@@ -547,19 +549,21 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             _longPressIdentifier += 1
             let identifier = _longPressIdentifier
             
-            delay(timeToStartMoving, closure: {
-                [weak self]
-                () -> () in
-
-                if let s = self {
-                    if identifier == s._longPressIdentifier {
-                        
-                        s._isReadyToMove = true
-                        s.cellInteractionClosure?(nil,gestureRecognizer)
-                        s.beginMovingCell(gestureRecognizer)
+            if _allowMovingCells {
+                delay(timeToStartMoving, closure: {
+                    [weak self]
+                    () -> () in
+                    
+                    if let s = self {
+                        if identifier == s._longPressIdentifier {
+                            
+                            s._isReadyToMove = true
+                            s.cellInteractionClosure?(nil,gestureRecognizer)
+                            s.beginMovingCell(gestureRecognizer)
+                        }
                     }
-                }
-            })
+                })
+            }
             
             
             
@@ -967,6 +971,12 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         }
         
         return false
+    }
+    
+    var longPressEnabled:Bool = true {
+        didSet {
+            self.longPressGestureRecognizer?.enabled = longPressEnabled
+        }
     }
     
     public override func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<Void>) {
