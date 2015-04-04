@@ -181,7 +181,11 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         return self.collectionView!.delegate as? ResponsiveCollectionViewLayoutDelegate
     }
     
+    var hasAddedResignObserver = false
+    
     func setupCollectionView() {
+        
+       
         
         //if self._allowMovingCells {
             
@@ -204,10 +208,13 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
             panGestureRecognizer.delegate = self
             
             self.collectionView!.addGestureRecognizer(panGestureRecognizer)
-            
+        
+        if !hasAddedResignObserver {
             // Useful in multiple scenarios: one common scenario being when the Notification Center drawer is pulled down
             NSNotificationCenter.defaultCenter().addObserver(self, selector: "handleApplicationWillResignActive:", name: UIApplicationWillResignActiveNotification, object: nil)
-            
+            hasAddedResignObserver = true
+        }
+        
             
         //}
     }
@@ -228,6 +235,9 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     deinit {
         self.removeObserver(self, forKeyPath: kRCVCollectionViewKeyPath)
         self.removeObserver(self, forKeyPath: kRCVCollectionViewContentOffsetKeyPath)
+        if hasAddedResignObserver {
+            NSNotificationCenter.defaultCenter().removeObserver(self, name: UIApplicationWillResignActiveNotification, object: nil)
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -891,7 +901,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     }
     
     private func _layoutAttributesForItemAtIndexPath(indexPath: NSIndexPath) -> UICollectionViewLayoutAttributes! {
-        println("asking about item at index \(indexPath.item)")
+        //println("asking about item at index \(indexPath.item)")
         if self.currentLayoutInfo == nil {
             return _postProcessAttributes(self.lDelegate.collectionView!(self.collectionView!, layout: self, defaultLayoutAttributesForItemAtIndexPath: indexPath))
         }else{
