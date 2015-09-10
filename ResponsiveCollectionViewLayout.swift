@@ -667,139 +667,141 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
         
         //println("Layout: this collection view \(self.collectionView) has layout \(self) and delegate \(self.collectionView?.delegate)")
         
-        let ldel = self.lDelegate!
-        
-        
-        
-        let thecv = self.collectionView!
-        
-        let shouldPrepare = ldel.shouldPrepareLayoutForCollectionView?(thecv, layout: self) ?? true
-        
-        if shouldPrepare {
+        if let ldel = self.lDelegate {
+            let thecv = self.collectionView!
             
-            currentLayoutInfo = ResponsiveLayoutInfo()
+            let shouldPrepare = ldel.shouldPrepareLayoutForCollectionView?(thecv, layout: self) ?? true
             
-            
-            
-            let sectionSuplementaryKinds = self.lDelegate.sectionSuplementaryViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
-            
-            let sectionDecorationViewKinds = self.lDelegate.sectionDecorationViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
-            
-            let cellSuplementaryKinds = self.lDelegate.cellSuplementaryViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
-            
-            let cellDecorationViewKinds = self.lDelegate.cellDecorationViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
-            
-            let numSections = self.collectionView!.numberOfSections()
-            
-            for var s = 0; s < numSections; s += 1 {
+            if shouldPrepare {
                 
-                for kind in sectionSuplementaryKinds {
-                    let attributes = _postProcessAttribute( UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s)))
-                    
-                    self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
-                    
-                    if currentLayoutInfo.suplementaryViews.count <= s {
-                        currentLayoutInfo.suplementaryViews.append([])
-                    }
-                    
-                    if currentLayoutInfo.suplementaryViews[s].count < 1 {
-                        currentLayoutInfo.suplementaryViews[s].append([kind:attributes])
-                    }else{
-                        currentLayoutInfo.suplementaryViews[s][0][kind] = attributes
-                    }
-                    
-                    
-                }
+                currentLayoutInfo = ResponsiveLayoutInfo()
                 
-                let numCells = self.collectionView!.numberOfItemsInSection(s)
                 
-                for var c = 0; c < numCells; c += 1 {
-                    let indexPath = NSIndexPath(forItem: c, inSection: s)
+                
+                let sectionSuplementaryKinds = self.lDelegate.sectionSuplementaryViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
+                
+                let sectionDecorationViewKinds = self.lDelegate.sectionDecorationViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
+                
+                let cellSuplementaryKinds = self.lDelegate.cellSuplementaryViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
+                
+                let cellDecorationViewKinds = self.lDelegate.cellDecorationViewKindsForCollectionView?(self.collectionView!, layout: self) ?? []
+                
+                let numSections = self.collectionView!.numberOfSections()
+                
+                for var s = 0; s < numSections; s += 1 {
                     
-                    
-                    for kind in cellSuplementaryKinds {
-                        let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: indexPath))
+                    for kind in sectionSuplementaryKinds {
+                        let attributes = _postProcessAttribute( UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s)))
                         
-                        self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
+                        self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
                         
-                        if currentLayoutInfo.suplementaryViews.count <= indexPath.section {
+                        if currentLayoutInfo.suplementaryViews.count <= s {
                             currentLayoutInfo.suplementaryViews.append([])
                         }
                         
-                        if currentLayoutInfo.suplementaryViews[indexPath.section].count <= indexPath.item {
-                            currentLayoutInfo.suplementaryViews[indexPath.section].append([:])
+                        if currentLayoutInfo.suplementaryViews[s].count < 1 {
+                            currentLayoutInfo.suplementaryViews[s].append([kind:attributes])
+                        }else{
+                            currentLayoutInfo.suplementaryViews[s][0][kind] = attributes
                         }
                         
-                        currentLayoutInfo.suplementaryViews[indexPath.section][indexPath.item][kind] = attributes
                         
                     }
                     
+                    let numCells = self.collectionView!.numberOfItemsInSection(s)
                     
-                    
-                    let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forCellWithIndexPath: indexPath))
-                    
-                    self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
-                    
-                    //attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
-                    
-                    if currentLayoutInfo.cells.count <= s {
-                        currentLayoutInfo.cells.append([])
+                    for var c = 0; c < numCells; c += 1 {
+                        let indexPath = NSIndexPath(forItem: c, inSection: s)
+                        
+                        
+                        for kind in cellSuplementaryKinds {
+                            let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forSupplementaryViewOfKind: kind, withIndexPath: indexPath))
+                            
+                            self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forSuplementaryViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
+                            
+                            if currentLayoutInfo.suplementaryViews.count <= indexPath.section {
+                                currentLayoutInfo.suplementaryViews.append([])
+                            }
+                            
+                            if currentLayoutInfo.suplementaryViews[indexPath.section].count <= indexPath.item {
+                                currentLayoutInfo.suplementaryViews[indexPath.section].append([:])
+                            }
+                            
+                            currentLayoutInfo.suplementaryViews[indexPath.section][indexPath.item][kind] = attributes
+                            
+                        }
+                        
+                        
+                        
+                        let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forCellWithIndexPath: indexPath))
+                        
+                        self.lDelegate.collectionView(self.collectionView!, layout: self, processAttributes: attributes, forCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
+                        
+                        //attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForCellAtIndexPath: indexPath, afterLayout: currentLayoutInfo)
+                        
+                        if currentLayoutInfo.cells.count <= s {
+                            currentLayoutInfo.cells.append([])
+                        }
+                        
+                        currentLayoutInfo.cells[s].append(attributes)
+                        
+                        
+                        for kind in cellDecorationViewKinds {
+                            let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: indexPath))
+                            
+                            self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
+                            
+                            if currentLayoutInfo.decorationViews.count <= indexPath.section {
+                                currentLayoutInfo.decorationViews.append([])
+                            }
+                            
+                            if currentLayoutInfo.decorationViews[indexPath.section].count <= indexPath.item {
+                                currentLayoutInfo.decorationViews[indexPath.section].append([:])
+                            }
+                            
+                            currentLayoutInfo.decorationViews[indexPath.section][indexPath.item][kind] = attributes
+                            
+                        }
+                        
                     }
                     
-                    currentLayoutInfo.cells[s].append(attributes)
-                    
-                    
-                    for kind in cellDecorationViewKinds {
-                        let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: indexPath))
+                    for kind in sectionDecorationViewKinds {
+                        let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s)))
                         
-                        self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:indexPath, afterLayout: currentLayoutInfo)
+                        self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
                         
-                        if currentLayoutInfo.decorationViews.count <= indexPath.section {
+                        //attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForDecorationViewOfKind: kind, inSection: s, afterLayout: currentLayoutInfo)
+                        
+                        if currentLayoutInfo.decorationViews.count <= s {
                             currentLayoutInfo.decorationViews.append([])
                         }
                         
-                        if currentLayoutInfo.decorationViews[indexPath.section].count <= indexPath.item {
-                            currentLayoutInfo.decorationViews[indexPath.section].append([:])
+                        if currentLayoutInfo.suplementaryViews[s].count < 1 {
+                            currentLayoutInfo.suplementaryViews[s].append([kind:attributes])
+                        }else{
+                            currentLayoutInfo.suplementaryViews[s][0][kind] = attributes
                         }
-                        
-                        currentLayoutInfo.decorationViews[indexPath.section][indexPath.item][kind] = attributes
-                        
                     }
                     
                 }
                 
-                for kind in sectionDecorationViewKinds {
-                    let attributes = _postProcessAttribute(UICollectionViewLayoutAttributes(forDecorationViewOfKind: kind, withIndexPath: NSIndexPath(forItem: 0, inSection: s)))
-                    
-                    self.lDelegate.collectionView?(self.collectionView!, layout: self, processAttributes: attributes, forDecorationViewOfKind: kind, atIndexPath:NSIndexPath(forItem: 0, inSection: s), afterLayout: currentLayoutInfo)
-                    
-                    //attributes.frame = self.lDelegate.collectionView(self.collectionView!, layout: self, rectForDecorationViewOfKind: kind, inSection: s, afterLayout: currentLayoutInfo)
-                    
-                    if currentLayoutInfo.decorationViews.count <= s {
-                        currentLayoutInfo.decorationViews.append([])
-                    }
-                    
-                    if currentLayoutInfo.suplementaryViews[s].count < 1 {
-                        currentLayoutInfo.suplementaryViews[s].append([kind:attributes])
-                    }else{
-                        currentLayoutInfo.suplementaryViews[s][0][kind] = attributes
-                    }
-                }
+                self.lDelegate.collectionView?(self.collectionView!, layout: self, postProcessLayoutInfo: currentLayoutInfo)
                 
+            }else{
+                currentLayoutInfo = nil
             }
-            
-            self.lDelegate.collectionView?(self.collectionView!, layout: self, postProcessLayoutInfo: currentLayoutInfo)
-            
-        }else{
-            currentLayoutInfo = nil
         }
+        
+        
+        
+        
         
         
         
     }
     
     public override func collectionViewContentSize() -> CGSize {
-        return self.lDelegate.collectionView(self.collectionView!, layout: self, contentSizeAfterLayout: self.currentLayoutInfo)
+        return self.lDelegate?.collectionView(self.collectionView!, layout: self, contentSizeAfterLayout: self.currentLayoutInfo) ?? CGSizeMake(100, 100)
     }
     
     let backgroundAlpha:CGFloat = 0.5
@@ -972,6 +974,7 @@ public class ResponsiveCollectionViewLayout: UICollectionViewLayout, UIGestureRe
     }
     
     public func gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWithGestureRecognizer otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
         if self.longPressGestureRecognizer.isEqual(gestureRecognizer) {
             return self.panGestureRecognizer.isEqual(otherGestureRecognizer)
         }
